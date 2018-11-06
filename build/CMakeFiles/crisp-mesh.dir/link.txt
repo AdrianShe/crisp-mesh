@@ -1,1 +1,0 @@
-/usr/bin/c++   -fPIC  -rdynamic CMakeFiles/crisp-mesh.dir/src/marching_cubes_offset.cpp.o CMakeFiles/crisp-mesh.dir/main.cpp.o  -o crisp-mesh -lGL glad/libglad.a glfw/src/libglfw3.a -lrt -lm -ldl -lX11 -lpthread 

@@ -27,9 +27,11 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 
 int main(int argc, char *argv[])
 {
-  // Load mesh and desired distance
+  // Load mesh with desired distance and resolution
   // argv[1] mesh
   // argv[2] distance
+  // argv[3] resolution
+
   igl::read_triangle_mesh(argv[1], V, F);
   double sigma = atof(argv[2]);
   int res = atol(argv[3]);
