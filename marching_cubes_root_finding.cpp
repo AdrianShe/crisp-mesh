@@ -33,11 +33,11 @@ extern const int edgeTable[256];
 extern const int triTable[256][2][17];
 extern const int polyTable[8][16];
 
-struct EdgeKey
+struct EdgeKey1
 {
-  EdgeKey(unsigned i0, unsigned i1) : i0_(i0), i1_(i1) {}
+  EdgeKey1(unsigned i0, unsigned i1) : i0_(i0), i1_(i1) {}
 
-  bool operator==(const EdgeKey& _rhs) const
+  bool operator==(const EdgeKey1& _rhs) const
   {
     return i0_ == _rhs.i0_ && i1_ == _rhs.i1_;
   }
@@ -45,9 +45,9 @@ struct EdgeKey
   unsigned i0_, i1_;
 };
 
-struct EdgeHash
+struct EdgeHash1
 {
-    std::size_t operator()(const EdgeKey& key) const {
+    std::size_t operator()(const EdgeKey1& key) const {
         std::size_t seed = 0;
         seed ^= key.i0_ + 0x9e3779b9 + (seed<<6) + (seed>>2); // Copied from boost::hash_combine
         seed ^= key.i1_ + 0x9e3779b9 + (seed<<6) + (seed>>2);
@@ -57,31 +57,26 @@ struct EdgeHash
 
 
 template <typename Derivedvalues, typename Derivedpoints,typename Derivedvertices, typename DerivedF>
-class MarchingCubes
+class MarchingCubesRF
 {
-  typedef std::unordered_map<EdgeKey, unsigned, EdgeHash> MyMap;
+  typedef std::unordered_map<EdgeKey1, unsigned, EdgeHash1> MyMap;
   typedef typename MyMap::const_iterator                  MyMapIterator;
 
 public:
-static void implicit_function_cutoff(const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE, double & ref) {
-  if ((LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT) || (LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_WYVILL_1986)) {
-      ref = 0.5;  // refer paper -- need to change (0.5 is temp)
-  } // add more else statements if adding more functions
-}
-
 static double implicit_local_function_wyvill_1986(double x1, double y1, double z1, double x2, double y2, double z2, double R) {
   double d_sq = pow((x1 - x2), 2.0) + pow((y1 - y2), 2.0) + pow((z1 - z2), 2.0);
   double dbyr_sq = d_sq/pow(R, 2.0);
   double a = -4.0/9.0;
   double b = 17.0/9;
   double c = -22.0/9;
-  double local_field = a * pow(dbyr_sq, 3) + b * pow(dbyr_sq, 2) + c * dbyr_sq + 1.0;
+  double local_field = a * pow(dbyr_sq, 3.0) + b * pow(dbyr_sq, 2.0) + c * dbyr_sq + 1.0;
   return local_field;
 }
 
 static double implicit_function_arbitrary_point(const Eigen::PlainObjectBase<Derivedvalues> &P, const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE, const double x, const double y, const double z, const double R) {
 
   double field_value = 0;
+  int influence_points = 0;
 
   // get all the points in P that are less than R distance to the test point provided here by (x, y, z)
   for (int i = 0; i < P.rows(); i++) {
@@ -92,14 +87,40 @@ static double implicit_function_arbitrary_point(const Eigen::PlainObjectBase<Der
 
     if ((LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT) || (LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_WYVILL_1986)) {
       field_value += implicit_local_function_wyvill_1986(x, y, z, P(i, 0), P(i, 1), P(i, 2), R);
+      influence_points += 1;
     } // add more else statements if adding more functions
   }
+
+  // if (influence_points != 0)
+  //   // normalize the field_value based on the point contributions
+  //   field_value = field_value/double(influence_points);
 
   return field_value;
 }
 
+static void implicit_function_cutoff(const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE, const double &R, const Eigen::PlainObjectBase<Derivedvalues> &P, double & ref) {
+  if ((LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT) || (LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_WYVILL_1986)) {
+    // refer paper -- we need to choose cutoff such that when two bubbles mix, the resulting surface occupies twice the volume
+    // calculations not in the paper but done on board 
+
+    double field_val_on_surface = 0.0;
+    for (int i =0; i<P.rows(); i++) {
+      field_val_on_surface += implicit_function_arbitrary_point(P, LOCAL_IMPLICIT_FUNCTION_TYPE, P(i,0), P(i,1),P(i,2),R);
+    }
+
+    field_val_on_surface = field_val_on_surface/P.rows();
+
+
+    std::cout<<"The surface field cutoff computed is "<<field_val_on_surface<<std::endl;
+    if (field_val_on_surface==1.0)
+      std::cout<<"WARNING: FOR THE RADIUS OF INFLUENCE CHOSEN, THE AVG FUNCTION VALUE AT INPUT POINT CLOUD IS 1 (that is, no other point in the neighborhood!). Consider increasing R!"<<std::endl;
+    ref = field_val_on_surface;
+  } // add more else statements if adding more functions
+}
+
 public:
-  MarchingCubes(const double R,
+  MarchingCubesRF(const double R,
+                const double cutoff,
                 const Eigen::PlainObjectBase<Derivedvalues> &P,
                 const Eigen::PlainObjectBase<Derivedpoints> &points,
                 const unsigned x_res,
@@ -113,7 +134,12 @@ public:
     assert(points.cols() == 3);
 
     double ref = 0.5; // some initialization. actual val is set below
-    implicit_function_cutoff(LOCAL_IMPLICIT_FUNCTION_TYPE, ref);
+
+    if (cutoff < 0)
+      implicit_function_cutoff(LOCAL_IMPLICIT_FUNCTION_TYPE, R, P, ref);
+    else
+      ref = cutoff;
+    
 
     if(x_res <2 || y_res<2 ||z_res<2)
       return;
@@ -249,7 +275,7 @@ public:
                                                MyMap &edge2vertex)
   {
     // find vertex if it has been computed already
-    MyMapIterator it = edge2vertex.find(EdgeKey(i0, i1));
+    MyMapIterator it = edge2vertex.find(EdgeKey1(i0, i1));
     if (it != edge2vertex.end())
       return it->second;
     ;
@@ -294,7 +320,7 @@ public:
       vertices.conservativeResize(vertices.rows()+10000, Eigen::NoChange);
 
     vertices.row(num_vertices-1)  = (midpt).template cast<typename Derivedvertices::Scalar>();
-    edge2vertex[EdgeKey(i0, i1)] = num_vertices-1;
+    edge2vertex[EdgeKey1(i0, i1)] = num_vertices-1;
 
     return num_vertices-1;
   }
@@ -308,6 +334,7 @@ public:
 template <typename Derivedvalues, typename Derivedpoints, typename Derivedvertices, typename DerivedF>
 IGL_INLINE void igl::copyleft::marching_cubes_root_finding(
   const double R,
+  const double cutoff,
   const Eigen::PlainObjectBase<Derivedvalues> &P,
   const Eigen::PlainObjectBase<Derivedpoints> &points,
   const unsigned x_res,
@@ -317,7 +344,7 @@ IGL_INLINE void igl::copyleft::marching_cubes_root_finding(
   Eigen::PlainObjectBase<Derivedvertices> &vertices,
   Eigen::PlainObjectBase<DerivedF> &faces)
 {
-  MarchingCubes<Derivedvalues, Derivedpoints, Derivedvertices, DerivedF> mc(R, P,
+  MarchingCubesRF<Derivedvalues, Derivedpoints, Derivedvertices, DerivedF> mc(R, cutoff, P,
                                        points,
                                        x_res,
                                        y_res,
