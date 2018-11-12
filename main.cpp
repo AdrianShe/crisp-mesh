@@ -8,29 +8,37 @@
 #include <iostream>
 
 
-Eigen::MatrixXd V, V_off, V_p, P, N;
-Eigen::MatrixXi F, F_off, F_p;
+
+Eigen::MatrixXd V, V_mc, V_mcr, closest_points;
+Eigen::MatrixXi F, F_mc, F_mcr;
 
 bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier) {
      if (key == '1') {
         std::cout << "original" << std::endl;
 	viewer.data().clear();
  	viewer.data().set_mesh(V, F);
-  viewer.data().set_points(P, Eigen::RowVector3d(1,1,1));
+  //viewer.data().set_points(P, Eigen::RowVector3d(1,1,1));
 	viewer.core.align_camera_center(V, F);
      }
      else if (key == '2') {
-        std::cout << "offset" << std::endl;
+        std::cout << "offset using marching cubes" << std::endl;
 	viewer.data().clear();
- 	viewer.data().set_mesh(V_off, F_off);
-	viewer.core.align_camera_center(V_off, F_off);
+ 	viewer.data().set_mesh(V_mc, F_mc);
+	viewer.core.align_camera_center(V_mc, F_mc);
      }
      else if (key == '3') {
-	std::cout << "offset using random points" << std::endl;
+	std::cout << "offset using marching cubes and root finding" << std::endl;
 	viewer.data().clear();
- 	// viewer.data().set_mesh(V_p, F_p);
-	viewer.core.align_camera_center(V_off, F_off);
-	// viewer.data().set_points(P, Eigen::RowVector3d(1,1,1));
+ 	viewer.data().set_mesh(V_mcr, F_mcr);
+	viewer.core.align_camera_center(V_mcr, F_mcr);
+     }
+     else if (key == '4') {
+	std::cout << "offset point cloud" << std::endl;
+	viewer.data().clear();	
+	viewer.data().set_points(closest_points, Eigen::RowVector3d(1,1,1));
+     }
+     else if (key == '5') {
+
      }
      return false;
 }
@@ -39,15 +47,17 @@ int main(int argc, char *argv[])
 {
   // Load mesh with desired distance and resolution
   // argv[1] mesh
-  // argv[2] distance
-  // argv[3] resolution
+  // argv[2] distance/radius of influence
+  // argv[3] grid resolution
 
   igl::read_triangle_mesh(argv[1], V, F);
   double sigma = atof(argv[2]);
   int res = atol(argv[3]);
   std::cout << "distance" << sigma << "resolution" << res << std::endl;
-  marching_cubes_offset(V, F, sigma, res, V_off, F_off);
-  random_points_offset(V, F, sigma, V.rows() / 20, P, N);
+
+  marching_cubes_offset(V, F, sigma, res, V_mc, F_mc, V_mcr, F_mcr, closest_points);
+
+  // random_points_offset(V, F, sigma, V.rows() / 20, P, N);
   // poisson_surface_reconstruction(P, N, V_p, F_p);
 
   // Render the original mesh and the offset mesh
