@@ -53,12 +53,14 @@ int main(int argc, char *argv[])
   // argv[1] mesh
   // argv[2] distance away from original mesh
   // argv[3] grid resolution
+  // argv[4] radius of influence
 
   igl::read_triangle_mesh(argv[1], V, F);
   double sigma = atof(argv[2]);
   int res = atol(argv[3]);
+  double r = atof(argv[4]);
   std::cout << "distance" << sigma << "resolution" << res << std::endl;
-  marching_cubes_offset(V, F, sigma, res, V_mc, F_mc, V_mcr, F_mcr, closest_points);
+  marching_cubes_offset(V, F, sigma, res, r, V_mc, F_mc, V_mcr, F_mcr, closest_points);
 /*  Eigen::MatrixXd GV;
   Eigen::VectorXi side;
   Eigen::VectorXd S;

@@ -3,6 +3,7 @@
 #include <igl/copyleft/marching_cubes_root_finding.h>
 #include "grid.h"
 #include "igl/point_mesh_squared_distance.h"
+#include "igl/signed_distance.h"
 #include <iostream>
 #include <random>
 
@@ -11,6 +12,7 @@ const Eigen::MatrixXd & V_1,
 const Eigen::MatrixXi & F_1, 
 const double sigma,  
 const int res,
+const double r,
 Eigen::MatrixXd & V_2, 
 Eigen::MatrixXi & F_2,
 Eigen::MatrixXd & V_3,
@@ -44,10 +46,11 @@ Eigen::MatrixXd & closest_point_cloud)
      Eigen::VectorXd dist;
      Eigen::VectorXd I;
      Eigen::MatrixXd closest_point; 
-     igl::point_mesh_squared_distance(grid_pos, V_1, F_1, dist, I, closest_point);
+     Eigen::MatrixXd N;
+     igl::signed_distance(grid_pos, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, sigma - 3 * h, sigma + 3 * h, dist, I, closest_point, N);
 
-     // produce mesh using marching cubes from distance data with iso level sigma^2 (as squared distances were returned).
-     igl::copyleft::marching_cubes(dist, grid_pos, side[0], side[1], side[2], sigma * sigma, V_2, F_2);
+     // produce mesh using marching cubes from distance data with iso level sigma 
+     igl::copyleft::marching_cubes(dist, grid_pos, side[0], side[1], side[2], sigma, V_2, F_2);
 
      // Marching cubes with root finding
      // Sample points close enough to original mesh (V, F)
@@ -55,18 +58,19 @@ Eigen::MatrixXd & closest_point_cloud)
      std::uniform_real_distribution<double> x_pos(min_x, max_x);
      std::uniform_real_distribution<double> y_pos(min_y, max_y);
      std::uniform_real_distribution<double> z_pos(min_z, max_z);
-     Eigen::MatrixXd sample_point_cloud(10000, 3);
+     Eigen::MatrixXd sample_point_cloud(100000, 3);
      for (int i = 0; i < sample_point_cloud.rows(); i++) {
 	Eigen::RowVector3d point(x_pos(gen), y_pos(gen), z_pos(gen));
 	sample_point_cloud.row(i) = point;
      }	
-     igl::point_mesh_squared_distance(sample_point_cloud, V_1, F_1, dist, I, closest_point);
+     igl::signed_distance(sample_point_cloud, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT,  sigma - 3 * h, sigma + 3 * h, dist, I, closest_point, N);
+
 
 
      // compute number of points in sample_point_cloud lying distance sigma from the mesh
      int n = 0;
      for (int i = 0; i < sample_point_cloud.rows(); i++) {
-	if (dist[i] <= sigma ) {
+	if (dist[i] <= sigma) {
 		n++;
 	}
      }
@@ -78,5 +82,5 @@ Eigen::MatrixXd & closest_point_cloud)
 		n++;
 	}
      }
-     igl::copyleft::marching_cubes_root_finding(2.0 * sigma, -1, closest_point_cloud, grid_pos, side[0], side[1], side[2], igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT, V_3, F_3);
+     igl::copyleft::marching_cubes_root_finding(r, -1, closest_point_cloud, grid_pos, side[0], side[1], side[2], igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT, V_3, F_3);
 } 
