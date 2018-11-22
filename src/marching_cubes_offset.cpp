@@ -47,12 +47,12 @@ Eigen::MatrixXd & closest_point_cloud)
      Eigen::VectorXd I;
      Eigen::MatrixXd closest_point; 
      Eigen::MatrixXd N;
-     igl::signed_distance(grid_pos, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, sigma - 3 * h, sigma + 3 * h, dist, I, closest_point, N);
+     igl::signed_distance(grid_pos, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), dist, I, closest_point, N);
 
      // produce mesh using marching cubes from distance data with iso level sigma 
      igl::copyleft::marching_cubes(dist, grid_pos, side[0], side[1], side[2], sigma, V_2, F_2);
 
-     // Marching cubes with root finding
+     // Marching cubes with root finding soft object method
      // Sample points close enough to original mesh (V, F)
   /*   std::default_random_engine gen;
      std::uniform_real_distribution<double> x_pos(min_x, max_x);

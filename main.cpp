@@ -6,7 +6,7 @@
 #include <Eigen/Core>
 #include <string>
 #include <iostream>
-
+#include "validate.h"
 
 
 Eigen::MatrixXd V, V_mc, V_mcr, V_igl, closest_points;
@@ -59,8 +59,13 @@ int main(int argc, char *argv[])
   double sigma = atof(argv[2]);
   int res = atol(argv[3]);
   double r = atof(argv[4]);
-  std::cout << "distance" << sigma << "resolution" << res << std::endl;
+  std::cout << "distance: " << sigma << "resolution: " << res << std::endl;
   marching_cubes_offset(V, F, sigma, res, r, V_mc, F_mc, V_mcr, F_mcr, closest_points);
+  std::cout << "marching cubes: " << std::endl;
+  validate(V, F, V_mc, F_mc, sigma);
+  std::cout << "marching cubes rf: " << std::endl;
+  validate(V, F, V_mcr, F_mcr, sigma);
+
 /*  Eigen::MatrixXd GV;
   Eigen::VectorXi side;
   Eigen::VectorXd S;
