@@ -1,6 +1,7 @@
 # crisp-mesh	
 Crisp Meshes for Implicit Functions
 Torus example copied from https://github.com/gaschler/bounding-mesh/blob/master/examples/torus/torus_decimated.off 
+Letter C created from AutoDesk TinkerCAD
 
 # How to use marching_cubes_root_finding
 
