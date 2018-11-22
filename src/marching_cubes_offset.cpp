@@ -8,8 +8,8 @@
 #include <random>
 
 void marching_cubes_offset(
-const Eigen::MatrixXd & V_1, 
-const Eigen::MatrixXi & F_1, 
+const Eigen::MatrixXd  & V_1, 
+const Eigen::MatrixXi  & F_1, 
 const double sigma,  
 const int res,
 const double r,
@@ -54,7 +54,7 @@ Eigen::MatrixXd & closest_point_cloud)
 
      // Marching cubes with root finding
      // Sample points close enough to original mesh (V, F)
-     std::default_random_engine gen;
+  /*   std::default_random_engine gen;
      std::uniform_real_distribution<double> x_pos(min_x, max_x);
      std::uniform_real_distribution<double> y_pos(min_y, max_y);
      std::uniform_real_distribution<double> z_pos(min_z, max_z);
@@ -63,7 +63,7 @@ Eigen::MatrixXd & closest_point_cloud)
 	Eigen::RowVector3d point(x_pos(gen), y_pos(gen), z_pos(gen));
 	sample_point_cloud.row(i) = point;
      }	
-     igl::signed_distance(sample_point_cloud, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT,  sigma - 3 * h, sigma + 3 * h, dist, I, closest_point, N);
+     igl::signed_distance(sample_point_cloud, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT,  sigma - 3 * h, sigma + 3 * h, dist, I, closest_point, N); 
 
 
 
@@ -81,6 +81,6 @@ Eigen::MatrixXd & closest_point_cloud)
 		closest_point_cloud.row(n) = sample_point_cloud.row(i);
 		n++;
 	}
-     }
-     igl::copyleft::marching_cubes_root_finding(r, -1, closest_point_cloud, grid_pos, side[0], side[1], side[2], igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT, V_3, F_3);
+     } */
+     igl::copyleft::marching_cubes_root_finding(V_1, F_1, r, sigma, V_1, grid_pos, (unsigned int) side[0], (unsigned int) side[1], (unsigned int) side[2], igl::copyleft::LocalImplicitFunction::SIGNED_DISTANCE, V_3, F_3);
 } 

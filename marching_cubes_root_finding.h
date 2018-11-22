@@ -48,25 +48,23 @@ namespace igl
     enum LocalImplicitFunction
     {
       LOCAL_IMPLICIT_FUNCTION_DEFAULT = 0, // same as WYVILL_1986
-      LOCAL_IMPLICIT_FUNCTION_WYVILL_1986 = 1
+      LOCAL_IMPLICIT_FUNCTION_WYVILL_1986 = 1,
+      SIGNED_DISTANCE = 2
     };
     
-    template <
-      typename Derivedvalues, 
-      typename Derivedpoints, 
-      typename Derivedvertices, 
-      typename DerivedF>
       IGL_INLINE void marching_cubes_root_finding(
+	const Eigen::MatrixXd &V,
+	const Eigen::MatrixXi &F,
         const double R,
         const double cutoff,
-        const Eigen::PlainObjectBase<Derivedvalues> &P,
-        const Eigen::PlainObjectBase<Derivedpoints> &points,
+        const Eigen::MatrixXd &P,
+        const Eigen::MatrixXd &points,
         const unsigned x_res,
         const unsigned y_res,
         const unsigned z_res,
         const LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE,
-        Eigen::PlainObjectBase<Derivedvertices> &vertices,
-        Eigen::PlainObjectBase<DerivedF> &faces);
+     Eigen::MatrixXd &vertices,
+  Eigen::MatrixXi &faces);
   }
 }
 

@@ -25,6 +25,7 @@
 
 #include "marching_cubes_root_finding.h"
 #include "marching_cubes_tables.h"
+#include "../signed_distance.h"
 #include <cmath>
 #include <unordered_map>
 #include <iostream>
@@ -56,7 +57,6 @@ struct EdgeHash1
 };
 
 
-template <typename Derivedvalues, typename Derivedpoints,typename Derivedvertices, typename DerivedF>
 class MarchingCubesRF
 {
   typedef std::unordered_map<EdgeKey1, unsigned, EdgeHash1> MyMap;
@@ -73,22 +73,32 @@ static double implicit_local_function_wyvill_1986(double x1, double y1, double z
   return local_field;
 }
 
-static double implicit_function_arbitrary_point(const Eigen::PlainObjectBase<Derivedvalues> &P, const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE, const double x, const double y, const double z, const double R) {
+static double implicit_function_arbitrary_point(const Eigen::MatrixXd &  V, const Eigen::MatrixXi & F, const Eigen::MatrixXd &P, const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE, const double x, const double y, const double z, const double R) {
 
   double field_value = 0;
   int influence_points = 0;
 
   // get all the points in P that are less than R distance to the test point provided here by (x, y, z)
+  if ((LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT) || (LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_WYVILL_1986)) {
   for (int i = 0; i < P.rows(); i++) {
     double d_sq = pow((x - P(i, 0)), 2.0) + pow((y - P(i, 1)), 2.0) + pow((z - P(i, 2)), 2.0);
     if (d_sq >= pow(R, 2)) {
       continue;
     }
-
-    if ((LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT) || (LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_WYVILL_1986)) {
       field_value += implicit_local_function_wyvill_1986(x, y, z, P(i, 0), P(i, 1), P(i, 2), R);
       influence_points += 1;
-    } // add more else statements if adding more functions
+     // add more else statements if adding more functions
+  }
+}
+  else if (LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::SIGNED_DISTANCE) {
+     Eigen::VectorXd dist;
+     Eigen::VectorXd I;
+     Eigen::MatrixXd closest_point; 
+     Eigen::MatrixXd N;
+     Eigen::MatrixXd query_P(1, 3);
+     query_P << x, y ,z;
+	igl::signed_distance(query_P, V, F, igl::SIGNED_DISTANCE_TYPE_DEFAULT, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), dist, I, closest_point, N);
+	return dist[0];
   }
 
   // if (influence_points != 0)
@@ -98,14 +108,14 @@ static double implicit_function_arbitrary_point(const Eigen::PlainObjectBase<Der
   return field_value;
 }
 
-static void implicit_function_cutoff(const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE, const double &R, const Eigen::PlainObjectBase<Derivedvalues> &P, double & ref) {
+static void implicit_function_cutoff(const Eigen::MatrixXd &V, const Eigen::MatrixXi &F, const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE, const double &R, const Eigen::MatrixXd &P, double & ref) {
   if ((LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_DEFAULT) || (LOCAL_IMPLICIT_FUNCTION_TYPE == igl::copyleft::LOCAL_IMPLICIT_FUNCTION_WYVILL_1986)) {
     // refer paper -- we need to choose cutoff such that when two bubbles mix, the resulting surface occupies twice the volume
     // calculations not in the paper but done on board 
 
     double field_val_on_surface = 0.0;
     for (int i =0; i<P.rows(); i++) {
-      field_val_on_surface += implicit_function_arbitrary_point(P, LOCAL_IMPLICIT_FUNCTION_TYPE, P(i,0), P(i,1),P(i,2),R);
+      field_val_on_surface += implicit_function_arbitrary_point(V, F, P, LOCAL_IMPLICIT_FUNCTION_TYPE, P(i,0), P(i,1),P(i,2),R);
     }
 
     field_val_on_surface = field_val_on_surface/P.rows();
@@ -119,16 +129,18 @@ static void implicit_function_cutoff(const igl::copyleft::LocalImplicitFunction 
 }
 
 public:
-  MarchingCubesRF(const double R,
+  MarchingCubesRF(const Eigen::MatrixXd & V,
+	const Eigen::MatrixXi & F,
+		const double R,
                 const double cutoff,
-                const Eigen::PlainObjectBase<Derivedvalues> &P,
-                const Eigen::PlainObjectBase<Derivedpoints> &points,
+                const Eigen::MatrixXd &P,
+                const Eigen::MatrixXd &points,
                 const unsigned x_res,
                 const unsigned y_res,
                 const unsigned z_res,
                 const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE,
-                Eigen::PlainObjectBase<Derivedvertices> &vertices,
-                Eigen::PlainObjectBase<DerivedF> &faces)
+                Eigen::MatrixXd &vertices,
+                Eigen::MatrixXi &faces)
   {
     assert(P.cols() == 3);
     assert(points.cols() == 3);
@@ -136,7 +148,7 @@ public:
     double ref = 0.5; // some initialization. actual val is set below
 
     if (cutoff < 0)
-      implicit_function_cutoff(LOCAL_IMPLICIT_FUNCTION_TYPE, R, P, ref);
+      implicit_function_cutoff(V, F, LOCAL_IMPLICIT_FUNCTION_TYPE, R, P, ref);
     else
       ref = cutoff;
     
@@ -175,7 +187,7 @@ public:
       }
 
       unsigned         corner[8];
-      typename DerivedF::Scalar samples[12];
+      int samples[12];
       unsigned char    cubetype(0);
       unsigned int     i;
 
@@ -202,7 +214,7 @@ public:
 
       // determine cube type
       for (i=0; i<8; ++i) {
-        double field = implicit_function_arbitrary_point(P, LOCAL_IMPLICIT_FUNCTION_TYPE, points(corner[i], 0), points(corner[i], 1), points(corner[i], 2), R);
+        double field = implicit_function_arbitrary_point(V, F, P, LOCAL_IMPLICIT_FUNCTION_TYPE, points(corner[i], 0), points(corner[i], 1), points(corner[i], 2), R);
         if (field > ref)
           cubetype |= (1<<i);
       }
@@ -216,29 +228,29 @@ public:
 
       // compute samples on cube's edges
       if (edgeTable[cubetype]&1)
-        samples[0]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[0], corner[1], vertices, num_vertices, edge2vertex);
+        samples[0]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[0], corner[1], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&2)
-        samples[1]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[1], corner[2], vertices, num_vertices, edge2vertex);
+        samples[1]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[1], corner[2], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&4)
-        samples[2]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[3], corner[2], vertices, num_vertices, edge2vertex);
+        samples[2]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[3], corner[2], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&8)
-        samples[3]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[0], corner[3], vertices, num_vertices, edge2vertex);
+        samples[3]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[0], corner[3], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&16)
-        samples[4]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[4], corner[5], vertices, num_vertices, edge2vertex);
+        samples[4]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[4], corner[5], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&32)
-        samples[5]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[5], corner[6], vertices, num_vertices, edge2vertex);
+        samples[5]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[5], corner[6], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&64)
-        samples[6]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[7], corner[6], vertices, num_vertices, edge2vertex);
+        samples[6]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[7], corner[6], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&128)
-        samples[7]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[4], corner[7], vertices, num_vertices, edge2vertex);
+        samples[7]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[4], corner[7], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&256)
-        samples[8]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[0], corner[4], vertices, num_vertices, edge2vertex);
+        samples[8]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[0], corner[4], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&512)
-        samples[9]  = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[1], corner[5], vertices, num_vertices, edge2vertex);
+        samples[9]  = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[1], corner[5], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&1024)
-        samples[10] = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[2], corner[6], vertices, num_vertices, edge2vertex);
+        samples[10] = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[2], corner[6], vertices, num_vertices, edge2vertex);
       if (edgeTable[cubetype]&2048)
-        samples[11] = add_vertex(R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[3], corner[7], vertices, num_vertices, edge2vertex);
+        samples[11] = add_vertex(V, F, R, ref, LOCAL_IMPLICIT_FUNCTION_TYPE, P, points, corner[3], corner[7], vertices, num_vertices, edge2vertex);
 
 
 
@@ -263,14 +275,16 @@ public:
 
   };
 
-  static typename DerivedF::Scalar  add_vertex(const double R, 
+  static int  add_vertex(const Eigen::MatrixXd & V, 
+					       const Eigen::MatrixXi & F,
+					       const double R, 
                                                const double ref,
                                                const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE,
-                                               const Eigen::PlainObjectBase<Derivedvalues> &P,
-                                               const Eigen::PlainObjectBase<Derivedpoints> &points,
+                                               const Eigen::MatrixXd &P,
+                                               const Eigen::MatrixXd &points,
                                                unsigned int i0,
                                                unsigned int i1,
-                                               Eigen::PlainObjectBase<Derivedvertices> &vertices,
+                                               Eigen::MatrixXd &vertices,
                                                int &num_vertices,
                                                MyMap &edge2vertex)
   {
@@ -283,17 +297,17 @@ public:
     double tol = 1e-4; // tolerance while root finding. when to stop.
 
     // generate new vertex
-    const Eigen::Matrix<typename Derivedpoints::Scalar, 1, 3> & p0 = points.row(i0);
-    const Eigen::Matrix<typename Derivedpoints::Scalar, 1, 3> & p1 = points.row(i1);
+    const Eigen::Matrix<double, 1, 3> & p0 = points.row(i0);
+    const Eigen::Matrix<double, 1, 3> & p1 = points.row(i1);
 
-    double s0 = implicit_function_arbitrary_point(P, LOCAL_IMPLICIT_FUNCTION_TYPE, points(i0, 0), points(i0, 1), points(i0, 2), R);
-    double s1 = implicit_function_arbitrary_point(P, LOCAL_IMPLICIT_FUNCTION_TYPE, points(i1, 0), points(i1, 1), points(i1, 2), R);
+    double s0 = implicit_function_arbitrary_point(V, F, P, LOCAL_IMPLICIT_FUNCTION_TYPE, points(i0, 0), points(i0, 1), points(i0, 2), R);
+    double s1 = implicit_function_arbitrary_point(V, F, P, LOCAL_IMPLICIT_FUNCTION_TYPE, points(i1, 0), points(i1, 1), points(i1, 2), R);
 
     // do root finding using binary search
-    Eigen::Matrix<typename Derivedpoints::Scalar, 1, 3> p0_bs = points.row(i0);
-    Eigen::Matrix<typename Derivedpoints::Scalar, 1, 3> p1_bs = points.row(i1);
+    Eigen::Matrix<double, 1, 3> p0_bs = points.row(i0);
+    Eigen::Matrix<double, 1, 3> p1_bs = points.row(i1);
 
-    Eigen::Matrix<typename Derivedpoints::Scalar, 1, 3> midpt;
+    Eigen::Matrix<double, 1, 3> midpt;
 
     // binary search until tol
     while ((p0_bs-p1_bs).squaredNorm() >= tol) { // squaredNorm is faster than norm()
@@ -301,8 +315,8 @@ public:
       midpt = (p0_bs + p1_bs)/2.0;
 
       // compute value here
-      double val_here = implicit_function_arbitrary_point(P, LOCAL_IMPLICIT_FUNCTION_TYPE, midpt(0), midpt(1), midpt(2), R);
-      double val_p0_bs = implicit_function_arbitrary_point(P, LOCAL_IMPLICIT_FUNCTION_TYPE, p0_bs(0), p0_bs(1), p0_bs(2), R);
+      double val_here = implicit_function_arbitrary_point(V, F, P, LOCAL_IMPLICIT_FUNCTION_TYPE, midpt(0), midpt(1), midpt(2), R);
+      double val_p0_bs = implicit_function_arbitrary_point(V, F, P, LOCAL_IMPLICIT_FUNCTION_TYPE, p0_bs(0), p0_bs(1), p0_bs(2), R);
 
       // check if mid pt is the root
       if (val_here == ref)
@@ -319,7 +333,7 @@ public:
     if (num_vertices > vertices.rows())
       vertices.conservativeResize(vertices.rows()+10000, Eigen::NoChange);
 
-    vertices.row(num_vertices-1)  = (midpt).template cast<typename Derivedvertices::Scalar>();
+    vertices.row(num_vertices-1)  = midpt;
     edge2vertex[EdgeKey1(i0, i1)] = num_vertices-1;
 
     return num_vertices-1;
@@ -331,20 +345,21 @@ public:
 };
 
 
-template <typename Derivedvalues, typename Derivedpoints, typename Derivedvertices, typename DerivedF>
 IGL_INLINE void igl::copyleft::marching_cubes_root_finding(
+  const Eigen::MatrixXd &V,
+  const Eigen::MatrixXi &F,
   const double R,
   const double cutoff,
-  const Eigen::PlainObjectBase<Derivedvalues> &P,
-  const Eigen::PlainObjectBase<Derivedpoints> &points,
+  const Eigen::MatrixXd &P,
+  const Eigen::MatrixXd &points,
   const unsigned x_res,
   const unsigned y_res,
   const unsigned z_res,
   const igl::copyleft::LocalImplicitFunction LOCAL_IMPLICIT_FUNCTION_TYPE,
-  Eigen::PlainObjectBase<Derivedvertices> &vertices,
-  Eigen::PlainObjectBase<DerivedF> &faces)
+  Eigen::MatrixXd &vertices,
+  Eigen::MatrixXi &faces)
 {
-  MarchingCubesRF<Derivedvalues, Derivedpoints, Derivedvertices, DerivedF> mc(R, cutoff, P,
+  MarchingCubesRF mc(V, F, R, cutoff, P,
                                        points,
                                        x_res,
                                        y_res,
@@ -353,17 +368,3 @@ IGL_INLINE void igl::copyleft::marching_cubes_root_finding(
                                        vertices,
                                        faces);
 }
-#ifdef IGL_STATIC_LIBRARY
-// Explicit template instantiation
-// generated by autoexplicit.sh
-template void igl::copyleft::marching_cubes_root_finding<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, 3, 1, -1, 3>, Eigen::Matrix<int, -1, 3, 1, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, unsigned int, unsigned int, unsigned int, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 3, 1, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 1, -1, 3> >&);
-// generated by autoexplicit.sh
-template void igl::copyleft::marching_cubes_root_finding<Eigen::Matrix<float, -1, 3, 0, -1, 3>, Eigen::Matrix<float, -1, 3, 0, -1, 3>, Eigen::Matrix<float, -1, 3, 0, -1, 3>, Eigen::Matrix<int, -1, 3, 0, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 3, 0, -1, 3> > const&, unsigned int, unsigned int, unsigned int, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 3, 0, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 0, -1, 3> >&);
-// generated by autoexplicit.sh
-template void igl::copyleft::marching_cubes_root_finding<Eigen::Matrix<float, -1, 3, 1, -1, 3>, Eigen::Matrix<float, -1, 3, 1, -1, 3>, Eigen::Matrix<float, -1, 3, 1, -1, 3>, Eigen::Matrix<int, -1, 3, 1, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 3, 1, -1, 3> > const&, unsigned int, unsigned int, unsigned int, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 3, 1, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 1, -1, 3> >&);
-// generated by autoexplicit.sh
-template void igl::copyleft::marching_cubes_root_finding<Eigen::Matrix<float, -1, -1, 0, -1, -1>, Eigen::Matrix<float, -1, -1, 0, -1, -1>, Eigen::Matrix<float, -1, 3, 1, -1, 3>, Eigen::Matrix<int, -1, 3, 1, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, -1, 0, -1, -1> > const&, unsigned int, unsigned int, unsigned int, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 3, 1, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 1, -1, 3> >&);
-// generated by autoexplicit.sh
-template void igl::copyleft::marching_cubes_root_finding<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<float, -1, 3, 1, -1, 3>, Eigen::Matrix<int, -1, 3, 1, -1, 3> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, unsigned int, unsigned int, unsigned int, Eigen::PlainObjectBase<Eigen::Matrix<float, -1, 3, 1, -1, 3> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, 3, 1, -1, 3> >&);
-template void igl::copyleft::marching_cubes_root_finding<Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<double, -1, -1, 0, -1, -1>, Eigen::Matrix<int, -1, -1, 0, -1, -1> >(Eigen::PlainObjectBase<Eigen::Matrix<double, -1, 1, 0, -1, 1> > const&, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> > const&, unsigned int, unsigned int, unsigned int, Eigen::PlainObjectBase<Eigen::Matrix<double, -1, -1, 0, -1, -1> >&, Eigen::PlainObjectBase<Eigen::Matrix<int, -1, -1, 0, -1, -1> >&);
-#endif
