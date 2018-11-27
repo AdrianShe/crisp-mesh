@@ -26,7 +26,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
         std::cout << "offset using marching cubes" << std::endl;
 	viewer.data().clear();
  	viewer.data().set_mesh(V_mc, F_mc);
-	igl::jet(int_dist_o, 0.5 * sigma, 1.5 * sigma, C);
+	igl::jet(int_dist_o, - 0.1 * sigma, 0.1 * sigma, C);
 	viewer.data().set_colors(C);
 	// viewer.core.align_camera_center(V_mc, F_mc);
      }
@@ -34,7 +34,7 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 	std::cout << "offset using marching cubes and root finding" << std::endl;
 	viewer.data().clear();
  	viewer.data().set_mesh(V_mcr, F_mcr);
-	igl::jet(int_dist_n, 0.5 * sigma, 1.5 * sigma, C);
+	igl::jet(int_dist_n, - 0.1 * sigma, 0.1 * sigma, C);
 	viewer.data().set_colors(C);
 	// viewer.core.align_camera_center(V_mcr, F_mcr);
      }

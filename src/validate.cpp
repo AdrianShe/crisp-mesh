@@ -46,4 +46,6 @@ const Eigen::MatrixXi & F_2, double sigma, Eigen::VectorXd & int_dist) {
 		// std::cout << cum_int << std::endl;
 	}
 	std::cout << "The integrated distance of the offset mesh is " << (cum_int) / (areas.sum()) << "." << std::endl;
-}
+Eigen::ArrayXd int_dist_a = int_dist.array() - sigma;
+	int_dist = int_dist_a.matrix();
+}	
