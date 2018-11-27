@@ -1,5 +1,8 @@
 #include "marching_cubes_offset.h"
 #include "random_points_offset.h"
+#include "output_grid_csv.h"
+#include "dual_contour_offset.h"
+
 #include <igl/read_triangle_mesh.h>
 #include <igl/copyleft/offset_surface.h>
 #include <igl/opengl/glfw/Viewer.h>
@@ -66,6 +69,7 @@ int main(int argc, char *argv[])
   sigma = atof(argv[2]);
   int res = atol(argv[3]);
   double r = atof(argv[4]);
+
   std::cout << "distance: " << sigma << "resolution: " << res << std::endl;
   marching_cubes_offset(V, F, sigma, res, r, V_mc, F_mc, V_mcr, F_mcr, closest_points);
   std::cout << "marching cubes: " << std::endl;
