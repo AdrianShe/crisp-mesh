@@ -135,7 +135,7 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
   // ce.resize(0);
   // Eigen::MatrixXd CIT(6,3);
   // CIT << 1,0,0, 0,1,0, 0,0,1, -1,0,0, 0,-1,0, 0,0,-1;
-  double push_factor = 1e-4;
+  double push_factor = 1e-5;
   double bisection_tol = 1e-3;
 
         // std::cout << CIT << std::endl;
@@ -145,7 +145,7 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
   // for (int i = 0; i < dist.rows(); ++i) {
   //   if (dist(i) <= sigma)
   //     std::cout << i << std::endl;
-  // }
+  // 
   // voxels.printDebug();
   // Eigen::VectorXi corner_test = voxels.getCorners(2,3,1);
   // for (int i = 0; i < corner_test.rows(); ++i)

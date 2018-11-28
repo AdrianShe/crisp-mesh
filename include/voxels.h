@@ -2,6 +2,7 @@
 #define VOXELS
 #include <Eigen/Core>
 #include <iostream>
+#include <vector>
 
 //  TBA
 namespace crisp {

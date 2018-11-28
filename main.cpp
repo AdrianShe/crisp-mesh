@@ -13,9 +13,9 @@
 #include "validate.h"
 
 
-Eigen::MatrixXd V, V_mc, V_mcr, V_igl, closest_points, C;
-Eigen::MatrixXi F, F_mc, F_mcr, F_igl;
-Eigen::VectorXd int_dist_o, int_dist_n;
+Eigen::MatrixXd V, V_mc, V_mcr, V_igl, V_d, closest_points, C;
+Eigen::MatrixXi F, F_mc, F_mcr, F_igl, F_d;
+Eigen::VectorXd int_dist_o, int_dist_n, int_dist_d;
 double sigma;
 
 bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier) {
@@ -31,7 +31,6 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
  	viewer.data().set_mesh(V_mc, F_mc);
 	igl::jet(int_dist_o, - 0.1 * sigma, 0.1 * sigma, C);
 	viewer.data().set_colors(C);
-	// viewer.core.align_camera_center(V_mc, F_mc);
      }
      else if (key == '3') {
 	std::cout << "offset using marching cubes and root finding" << std::endl;
@@ -39,21 +38,14 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
  	viewer.data().set_mesh(V_mcr, F_mcr);
 	igl::jet(int_dist_n, - 0.1 * sigma, 0.1 * sigma, C);
 	viewer.data().set_colors(C);
-	// viewer.core.align_camera_center(V_mcr, F_mcr);
      }
      else if (key == '4') {
-	std::cout << "offset point cloud" << std::endl;
- 	viewer.data().point_size = 10;
+	std::cout << "offset using dual contouring" << std::endl;
 	viewer.data().clear();	
-	viewer.data().set_points(closest_points, Eigen::RowVector3d(1,1,1));
+	viewer.data().set_mesh(V_d, F_d);
+	igl::jet(int_dist_d, - 0.1 * sigma, 0.1 * sigma, C);
+	viewer.data().set_colors(C);
      }
-   /* else if (key == '5') {
-	std::cout << "igl offset implementation" << std::endl;
-	viewer.data().clear();
- 	viewer.data().set_mesh(V_igl, F_igl);
-	viewer.core.align_camera_center(V_igl, F_igl);
-     } */
-     
      return false;
 }
 
@@ -76,7 +68,11 @@ int main(int argc, char *argv[])
   validate(V, F, V_mc, F_mc, sigma, int_dist_o);
 
   std::cout << "marching cubes rf: " << std::endl;
-  validate(V, F, V_mcr, F_mcr, sigma, int_dist_n);
+  validate(V, F, V_mcr, F_mcr, sigma, int_dist_n); 
+
+  std::cout << "dual contouring: " <<std::endl;
+  dual_contour_offset(V, F, sigma, res, V_d, F_d);
+  validate(V, F, V_d, F_d, sigma, int_dist_d);
 
 /*  Eigen::MatrixXd GV;
   Eigen::VectorXi side;
