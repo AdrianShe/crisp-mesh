@@ -1,5 +1,6 @@
 #include "marching_cubes_offset.h"
 #include "marching_cubes_offset_rf.h"
+#include "opt_vertices.h"
 #include "output_grid_csv.h"
 #include "dual_contour_offset.h"
 #include <igl/write_triangle_mesh.h>
@@ -13,8 +14,8 @@
 #include "validate.h"
 
 
-Eigen::MatrixXd V, V_mc, V_mcr, V_igl, V_d, closest_points, C;
-Eigen::MatrixXi F, F_mc, F_mcr, F_igl, F_d;
+Eigen::MatrixXd V, V_mc, V_mcr, V_mco, V_igl, V_d, closest_points, C;
+Eigen::MatrixXi F, F_mc, F_mcr, F_mco, F_igl, F_d;
 Eigen::VectorXd int_dist_o, int_dist_n, int_dist_d;
 double sigma;
 
@@ -33,9 +34,9 @@ bool key_down(igl::opengl::glfw::Viewer& viewer, unsigned char key, int modifier
 	viewer.data().set_colors(C);
      }
      else if (key == '3') {
-	std::cout << "offset using marching cubes and root finding" << std::endl;
+	std::cout << "offset using marching cubes and optimization" << std::endl;
 	viewer.data().clear();
- 	viewer.data().set_mesh(V_mcr, F_mcr);
+ 	viewer.data().set_mesh(V_mco, F_mco);
 	igl::jet(int_dist_n, - 0.1 * sigma, 0.1 * sigma, C);
 	viewer.data().set_colors(C);
      }
@@ -60,23 +61,26 @@ int main(int argc, char *argv[])
   igl::read_triangle_mesh(argv[1], V, F);
   sigma = atof(argv[2]);
   int res = atol(argv[3]);
-//  double r = atof(argv[4]);
+  double lambda = atof(argv[4]);
 
   std::cout << "distance: " << sigma << "resolution: " << res << std::endl;
   marching_cubes_offset(V, F, sigma, res, V_mc, F_mc);
   std::cout << "marching cubes: " << std::endl;
   validate(V, F, V_mc, F_mc, sigma, int_dist_o);
 
+  std::cout << "marching cubes optimization: " <<std::endl;
+  opt_vertices(V, F, sigma, lambda, V_mc, F_mc, V_mco, F_mco); 
+  validate(V, F, V_mco, F_mco, sigma, int_dist_n);
 
-  std::cout << "marching cubes rf: " << std::endl;
-  marching_cubes_offset_rf(V, F, sigma, res, V_mcr, F_mcr);
-  validate(V, F, V_mcr, F_mcr, sigma, int_dist_n); 
+  // std::cout << "marching cubes rf: " << std::endl;
+  // marching_cubes_offset_rf(V, F, sigma, res, V_mcr, F_mcr);
+  // validate(V, F, V_mcr, F_mcr, sigma, int_dist_n); 
   // igl::jet(int_dist_n, - 0.1 * sigma, 0.1 * sigma, C);
   // igl::write_triangle_mesh("marching_cubes.off", V_mcr, F_mcr);
 
-  std::cout << "dual contouring: " <<std::endl;
-  dual_contour_offset(V, F, sigma, res, V_d, F_d);
-  validate(V, F, V_d, F_d, sigma, int_dist_d); 
+  // std::cout << "dual contouring: " <<std::endl;
+  // dual_contour_offset(V, F, sigma, res, V_d, F_d);
+  // validate(V, F, V_d, F_d, sigma, int_dist_d); 
   // igl::jet(int_dist_d, - 0.1 * sigma, 0.1 * sigma, C);
   // igl::write_triangle_mesh("dual_contouring.off", V_d, F_d);
 
