@@ -1,8 +1,8 @@
 #include "marching_cubes_offset.h"
-#include "random_points_offset.h"
+#include "marching_cubes_offset_rf.h"
 #include "output_grid_csv.h"
 #include "dual_contour_offset.h"
-
+#include <igl/write_triangle_mesh.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/copyleft/offset_surface.h>
 #include <igl/opengl/glfw/Viewer.h>
@@ -55,29 +55,30 @@ int main(int argc, char *argv[])
   // argv[1] mesh
   // argv[2] distance away from original mesh
   // argv[3] grid resolution
-  // argv[4] radius of influence
+
 
   igl::read_triangle_mesh(argv[1], V, F);
   sigma = atof(argv[2]);
   int res = atol(argv[3]);
-  double r = atof(argv[4]);
+//  double r = atof(argv[4]);
 
   std::cout << "distance: " << sigma << "resolution: " << res << std::endl;
-  marching_cubes_offset(V, F, sigma, res, r, V_mc, F_mc, V_mcr, F_mcr, closest_points);
+  marching_cubes_offset(V, F, sigma, res, V_mc, F_mc);
   std::cout << "marching cubes: " << std::endl;
   validate(V, F, V_mc, F_mc, sigma, int_dist_o);
 
+
   std::cout << "marching cubes rf: " << std::endl;
+  marching_cubes_offset_rf(V, F, sigma, res, V_mcr, F_mcr);
   validate(V, F, V_mcr, F_mcr, sigma, int_dist_n); 
+  // igl::jet(int_dist_n, - 0.1 * sigma, 0.1 * sigma, C);
+  // igl::write_triangle_mesh("marching_cubes.off", V_mcr, F_mcr);
 
   std::cout << "dual contouring: " <<std::endl;
   dual_contour_offset(V, F, sigma, res, V_d, F_d);
-  validate(V, F, V_d, F_d, sigma, int_dist_d);
-
-/*  Eigen::MatrixXd GV;
-  Eigen::VectorXi side;
-  Eigen::VectorXd S;
-  igl::copyleft::offset_surface(V, F, sigma, res, igl::SIGNED_DISTANCE_TYPE_DEFAULT, V_igl, F_igl, GV, side, S); */
+  validate(V, F, V_d, F_d, sigma, int_dist_d); 
+  // igl::jet(int_dist_d, - 0.1 * sigma, 0.1 * sigma, C);
+  // igl::write_triangle_mesh("dual_contouring.off", V_d, F_d);
 
   // Render the original mesh and the offset mesh
   igl::opengl::glfw::Viewer viewer;

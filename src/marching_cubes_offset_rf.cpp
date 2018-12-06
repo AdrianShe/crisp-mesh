@@ -1,11 +1,11 @@
 #include "marching_cubes_offset.h"
-#include <igl/copyleft/marching_cubes.h>
+#include <igl/copyleft/marching_cubes_root_finding.h>
 #include "grid.h"
 #include "igl/point_mesh_squared_distance.h"
 #include "igl/signed_distance.h"
 #include <iostream>
 
-void marching_cubes_offset(
+void marching_cubes_offset_rf(
 const Eigen::MatrixXd  & V_1, 
 const Eigen::MatrixXi  & F_1, 
 const double sigma,  
@@ -42,10 +42,7 @@ Eigen::MatrixXi & F_2)
      Eigen::MatrixXd closest_point; 
      Eigen::MatrixXd N;
      igl::signed_distance(grid_pos, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), dist, I, closest_point, N);
-     Eigen::VectorXd O(dist.size());
-     O.setOnes();
-     dist = dist - sigma * O;
 
      // produce mesh using marching cubes from distance data with iso level sigma 
-     igl::copyleft::marching_cubes(dist, grid_pos, side[0], side[1], side[2], 0, V_2, F_2);
+     igl::copyleft::marching_cubes_root_finding(V_1, F_1, 0, sigma, V_1, grid_pos, (unsigned int) side[0], (unsigned int) side[1], (unsigned int) side[2], igl::copyleft::LocalImplicitFunction::SIGNED_DISTANCE, V_2, F_2);
 } 
