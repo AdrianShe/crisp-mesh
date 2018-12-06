@@ -129,13 +129,13 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
   std::vector<Eigen::RowVectorXi> faces;
   // Eigen::Matrix3d ATA;
   // Eigen::Vector3d ATb;
-  // Eigen::VectorXd ce;
-  // Eigen::MatrixXd CE;
-  // CE.resize(3,0);
-  // ce.resize(0);
-  // Eigen::MatrixXd CIT(6,3);
-  // CIT << 1,0,0, 0,1,0, 0,0,1, -1,0,0, 0,-1,0, 0,0,-1;
-  double push_factor = 1e-5;
+  Eigen::VectorXd ce;
+  Eigen::MatrixXd CE;
+  CE.resize(3,0);
+  ce.resize(0);
+  Eigen::MatrixXd CIT(6,3);
+  CIT << 1,0,0, 0,1,0, 0,0,1, -1,0,0, 0,-1,0, 0,0,-1;
+  double push_factor = 1e-1;
   double bisection_tol = 1e-3;
 
         // std::cout << CIT << std::endl;
@@ -242,23 +242,26 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
           b(ii) = dots[ii];
         } // end loop ii
 
-        Eigen::MatrixXd A_inv;
-        igl::pinv(A, A_inv);
-        x = (A_inv*b).transpose();
+        // Eigen::MatrixXd A_inv;
+        // igl::pinv(A, A_inv);
+        // x = (A_inv*b).transpose();
 
-        // Eigen::VectorXd ci0(6);
-        // ci0 << -x1(0), -x1(1), -x1(2), x2(0), x2(1), x2(2);
+        Eigen::VectorXd ci0(6);
+        ci0 << -x1(0), -x1(1), -x1(2), x2(0), x2(1), x2(2);
         // ci0 *= -1;
 
-        // bool success = igl::copyleft::quadprog(
-        //     A.transpose()*A, 
-        //     -b.transpose()*A,  
-        //     CE, 
-        //     ce,  
-        //     CIT.transpose(), 
-        //     ci0, 
-        //     y
-        //   );
+        bool success = igl::copyleft::quadprog(
+            A.transpose()*A, 
+            -b.transpose()*A,  
+            CE, 
+            ce,  
+            CIT.transpose(), 
+            ci0, 
+            y
+          );
+
+        if (std::isnan(y(0)) || std::isnan(y(1)) || std::isnan(y(2)) )
+          throw std::runtime_error("[dual_contour] nan.");
 
         // clamp
         bool flag = true;
@@ -275,8 +278,8 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
         // } // end loop ii
 
         // if (flag)
-          // voxels.setVertex(i, j, k, y.transpose());
-        voxels.setVertex(i, j, k, x);
+          voxels.setVertex(i, j, k, y.transpose());
+        // voxels.setVertex(i, j, k, x);
 
       } // end loop k
     } // end loop j
