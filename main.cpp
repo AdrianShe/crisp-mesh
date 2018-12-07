@@ -14,8 +14,8 @@
 #include "validate.h"
 
 
-Eigen::MatrixXd V, V_mc, V_mcr, V_mco, V_igl, V_d, closest_points, C;
-Eigen::MatrixXi F, F_mc, F_mcr, F_mco, F_igl, F_d;
+Eigen::MatrixXd V, V_mc, V_mcr, V_mco, V_d, C;
+Eigen::MatrixXi F, F_mc, F_mcr, F_mco, F_d;
 Eigen::VectorXd int_dist_o, int_dist_n, int_dist_d;
 double sigma;
 
@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
   // argv[1] mesh
   // argv[2] distance away from original mesh
   // argv[3] grid resolution
-
+  // argv[4] lambda for gradient descent
 
   igl::read_triangle_mesh(argv[1], V, F);
   sigma = atof(argv[2]);
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
   std::cout << "marching cubes optimization: " <<std::endl;
   opt_vertices(V, F, sigma, lambda, V_mc, F_mc, V_mco, F_mco); 
   validate(V, F, V_mco, F_mco, sigma, int_dist_n);
-
+  // validate(V, F, V_mcto, F_mcto, sigma, int_dist_d);
   // std::cout << "marching cubes rf: " << std::endl;
   // marching_cubes_offset_rf(V, F, sigma, res, V_mcr, F_mcr);
   // validate(V, F, V_mcr, F_mcr, sigma, int_dist_n); 

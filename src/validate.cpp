@@ -22,7 +22,7 @@ const Eigen::MatrixXi & F_2, double sigma, Eigen::VectorXd & int_dist) {
 	double stdev = std::sqrt(sq_dev.mean()); 
 	// std::cout << "The minimum offset to original distance " << min << std::endl;
 	// std::cout << "The maximum offset to original distance " << max << std::endl;
-	std::cout << "The mean offset to original distance " << avg << "." << std::endl ;
+	std::cout << "The mean offset to original distance " << avg - sigma << "." << std::endl ;
 	std::cout << "The standard deviation of offset to original distance " << stdev << "." << std::endl;
 
 	// Now compute integrated distances over the mesh using quadrature rule on page 422-423 http://www.techmat.vgtu.lt/~inga/Files/Quarteroni-SkaitMetod.pdf
@@ -45,7 +45,7 @@ const Eigen::MatrixXi & F_2, double sigma, Eigen::VectorXd & int_dist) {
 		cum_int = cum_int + areas(i) * int_dist(i); 
 		// std::cout << cum_int << std::endl;
 	}
-	std::cout << "The integrated distance of the offset mesh is " << (cum_int) / (areas.sum()) << "." << std::endl;
+	std::cout << "The integrated distance of the offset mesh is " << (cum_int) / (areas.sum()) - sigma << "." << std::endl;
 Eigen::ArrayXd int_dist_a = int_dist.array() - sigma;
 	int_dist = int_dist_a.matrix();
 }	
