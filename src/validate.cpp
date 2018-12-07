@@ -24,24 +24,26 @@ const Eigen::MatrixXi & F_2, double sigma, Eigen::VectorXd & int_dist) {
 	// std::cout << "The maximum offset to original distance " << max << std::endl;
 	std::cout << "The mean offset to original distance " << avg - sigma << "." << std::endl ;
 	std::cout << "The standard deviation of offset to original distance " << stdev << "." << std::endl;
+	Eigen::MatrixXd query(7 * F_2.rows(), 3);
+	for (int i = 0; i <  F_2.rows(); i++) {
+		query.row(7 * i) = V_2.row(F_2(i,0));
+		query.row(7 * i + 1) = V_2.row(F_2(i,1));
+		query.row(7 * i + 2) = V_2.row(F_2(i,2));
+		query.row(7 * i + 3) = (V_2.row(F_2(i,0)) + V_2.row(F_2(i,1))) / 2.0;
+		query.row(7 * i + 4) = (V_2.row(F_2(i,1)) + V_2.row(F_2(i,2))) / 2.0;
+		query.row(7 * i + 5) = (V_2.row(F_2(i,0)) + V_2.row(F_2(i,2))) / 2.0;
+		query.row(7 * i + 6) = (V_2.row(F_2(i,0)) + V_2.row(F_2(i,1)) + V_2.row(F_2(i,2))) / 3.0;
+	}
+	std::cout << "query points set" << "." << std::endl;
 
 	// Now compute integrated distances over the mesh using quadrature rule on page 422-423 http://www.techmat.vgtu.lt/~inga/Files/Quarteroni-SkaitMetod.pdf
 	int_dist.resize(F_2.rows());
 	Eigen::VectorXd areas;
 	igl::doublearea(V_2, F_2, areas);
 	double cum_int = 0.0;
+	igl::signed_distance(query, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), dist, I, closest_point, N);
 	for (int i = 0; i < F_2.rows(); i++) {
-		Eigen::MatrixXd query(7, 3);
-		query.row(0) = V_2.row(F_2(i, 0)); // vertices
-		query.row(1) = V_2.row(F_2(i, 1)); 
-		query.row(2) = V_2.row(F_2(i, 2));
-		query.row(3) = (query.row(0) + query.row(1)) / 2; // edge midpoints
- 		query.row(4) = (query.row(1) + query.row(2)) / 2; 
-		query.row(5) = (query.row(0) + query.row(2)) / 2; 
-		query.row(6) = (query.row(3) + query.row(4) + query.row(5)) / 3; // centroid
-		dist.setZero();
-	     	igl::signed_distance(query, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), dist, I, closest_point, N);
-		int_dist(i) = (1.0 / 60.0) * (3.0 * (dist(0) + dist(1) + dist(2)) + 8.0 * (dist(3) + dist(4) + dist(5)) + 27.0 * dist(6));
+		int_dist(i) = (1.0 / 60.0) * (3.0 * (dist(7 * i) + dist(7 * i + 1) + dist(7 * i + 2)) + 8.0 * (dist(7 * i + 3) + dist(7 * i + 4) + dist(7 * i + 5)) + 27.0 * dist(7 * i + 6));
 		cum_int = cum_int + areas(i) * int_dist(i); 
 		// std::cout << cum_int << std::endl;
 	}

@@ -7,12 +7,8 @@ void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, cons
 	
 	V.resize(V_2.rows(), 3);
 	F.resize(F_2.rows(), 3);
-	V_last.resize(V_2.rows(), 3);
-	F_last.resize(F_2.rows(), 3);
 	V = V_2;
  	F = F_2;
-	V_last = V_2;
-	F_last = F_2;
 
 	// Do an iteration of gradient descient. 
 	Eigen::VectorXd dist;
