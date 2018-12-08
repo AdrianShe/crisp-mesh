@@ -38,7 +38,7 @@ void approximate_normals(const Eigen::MatrixXd& C, const Eigen::MatrixXd& proj_C
 }
 
 void opt_vertices_dual(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, 
-    const double sigma, const double lambda,
+    const double sigma, const double lambda,const double tol,
     Eigen::MatrixXd & V_2, Eigen::MatrixXi & F_2,  Eigen::MatrixXd & V) {
 	
   bool area_flag = false;
@@ -72,10 +72,14 @@ void opt_vertices_dual(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1,
   approximate_normals(C, closest_point, N);
 
   new_cost = compute_cost(sigma, A, closest_point, N, V, VF);
-	std::cout << "Cost: " << new_cost << std::endl;
+	std::cout << "Initial Cost: " << new_cost << std::endl;
+
+	
+	int num_its = 0;
+	// int min_its_to_do = 1000; 
 
   // loop while cost decreases
-	while (new_cost < cur_cost) {
+	while  ((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol)  {
 		cur_cost = new_cost;	 
 		V = V_temp;
 
@@ -101,7 +105,10 @@ void opt_vertices_dual(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1,
 
     // Compute new cost
 	  new_cost = compute_cost(sigma, A, closest_point, N, V_temp, VF);
-	  std::cout << "Cost: " << new_cost << std::endl;
+	//std::cout << "Cost: " << new_cost << std::endl;
+	num_its++;
 	}  // end while loop
+	std::cout << "Number of iterations: " << num_its << std::endl;
+	std::cout << "Final cost: " << cur_cost << std::endl;
   // std::cout << "Cost: " << new_cost << std::endl;
 }

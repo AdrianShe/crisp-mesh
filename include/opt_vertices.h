@@ -12,6 +12,6 @@
 //
 //  Outputs:
 //  (V, F) is the offset surface generated from (V_2, F_2) using marching cubes method 
-void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, const double sigma, const double lambda,
- Eigen::MatrixXd & V_2, Eigen::MatrixXi & F_2,  Eigen::MatrixXd & V, Eigen::MatrixXi & F);
+void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, const double sigma, const double lambda, const double tol,
+  Eigen::MatrixXd & V_2, Eigen::MatrixXi & F_2, Eigen::MatrixXd & V);
 #endif

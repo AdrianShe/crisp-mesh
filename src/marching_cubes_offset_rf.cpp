@@ -22,8 +22,8 @@ Eigen::MatrixXi & F_2)
      double max_z = V_1.col(2).maxCoeff() + 2.0 * sigma;
      Eigen::RowVector3d lower(min_x, min_y, min_z);
      Eigen::RowVector3d upper(max_x, max_y, max_z);
-     std::cout << "lower corner coordinates: " << lower << std::endl;
-     std::cout << "upper corner coordinates: " << upper << std::endl;
+   //  std::cout << "lower corner coordinates: " << lower << std::endl;
+   //  std::cout << "upper corner coordinates: " << upper << std::endl;
      Eigen::RowVector3d side_lens = upper - lower;
      
      // Scale grid such that min_side_len gets res query points and create it

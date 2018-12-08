@@ -2,13 +2,13 @@
 #include "igl/signed_distance.h"
 #include <iostream>
 
-void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, const double sigma, const double lambda,
- Eigen::MatrixXd & V_2, Eigen::MatrixXi & F_2,  Eigen::MatrixXd & V, Eigen::MatrixXi & F) {
+void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, const double sigma, const double lambda, const double tol,
+  Eigen::MatrixXd & V_2,  Eigen::MatrixXi & F_2, Eigen::MatrixXd & V) {
 	
 	V.resize(V_2.rows(), 3);
-	F.resize(F_2.rows(), 3);
+	// F.resize(F_2.rows(), 3);
 	V = V_2;
- 	F = F_2;
+ 	// F = F_2;
 
 	// Do an iteration of gradient descient. 
 	Eigen::VectorXd dist;
@@ -27,8 +27,9 @@ void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, cons
 	V_temp = V;
 	dist_scaled = dist - sigma * (Eigen::VectorXd::Ones(V.rows()));
 	new_cost = std::pow(dist_scaled.norm(), 2);
-	std::cout << "Cost: " << new_cost << std::endl;
-	while (new_cost < cur_cost) {
+	std::cout << "Initial Cost: " << new_cost << std::endl;
+	int num_its = 0;
+	while ( ((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol)) {
 		cur_cost = new_cost;	 
 		V = V_temp;
  		for (int i = 0; i < V.rows(); i++) {
@@ -39,7 +40,10 @@ void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, cons
      		igl::signed_distance(V_temp, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, std::numeric_limits<double>::min(), 		std::numeric_limits<double>::max(), dist, I, closest_point, N);
 		Eigen::VectorXd dist_scaled = dist - sigma * (Eigen::VectorXd::Ones(V.rows()));
 		new_cost = std::pow(dist_scaled.norm(), 2);
-		std::cout << "Cost: " << new_cost << std::endl;
+ 		num_its++;
+		// std::cout << "Cost: " << new_cost << std::endl;
 	}
+	std::cout << "Number of Iterations " << num_its << std::endl;
+	std::cout << "Final Cost: " << cur_cost << std::endl; 
 }
 
