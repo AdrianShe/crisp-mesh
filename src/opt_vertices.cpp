@@ -29,7 +29,9 @@ void opt_vertices(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1, cons
 	new_cost = std::pow(dist_scaled.norm(), 2);
 	std::cout << "Initial Cost: " << new_cost << std::endl;
 	int num_its = 0;
-	while ( ((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol)) {
+	int max_its = 1000;
+  // loop while cost decreases
+	while  (((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol) && ( num_its <= max_its)) {
 		cur_cost = new_cost;	 
 		V = V_temp;
  		for (int i = 0; i < V.rows(); i++) {

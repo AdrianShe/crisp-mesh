@@ -17,11 +17,11 @@ const Eigen::MatrixXi & F_2, double sigma, Eigen::VectorXd & int_dist) {
 	igl::signed_distance(V_2, V_1, F_1, igl::SIGNED_DISTANCE_TYPE_DEFAULT, std::numeric_limits<double>::min(), std::numeric_limits<double>::max(), dist, I, closest_point, N);
 	double avg = dist.mean();
 	Eigen::ArrayXd sq_dev = dist.array();
-        sq_dev = sq_dev - sigma;
+        sq_dev = sq_dev - avg;
 	sq_dev = sq_dev * sq_dev;
 	double stdev = std::sqrt(sq_dev.mean()); 
 	std::cout << "Error in mean vertex distance: " << avg - sigma << "." << std::endl ;
-	std::cout << "RMS deviation in mean vertex distance: " << stdev << "." << std::endl;
+	std::cout << "Standard Deviation in Distance: " << stdev << "." << std::endl;
 	
 	// Compute integrated per-vertex error
 	Eigen::MatrixXd query(7 * F_2.rows(), 3);
@@ -49,10 +49,10 @@ const Eigen::MatrixXi & F_2, double sigma, Eigen::VectorXd & int_dist) {
 	cum_int = cum_int / areas.sum();
 	std::cout << "Error in integrated distance: " << cum_int - sigma << "." << std::endl;
 	sq_dev = int_dist.array();
-        sq_dev = sq_dev - sigma;
+        sq_dev = sq_dev - sq_dev.mean();
 	sq_dev = sq_dev * sq_dev;
 	stdev = std::sqrt(sq_dev.mean()); 
-	std::cout << "RMS deviation in integrated vertex distance: " << stdev << "." << std::endl;
+	std::cout << "Standard Deviation in Distance: " << stdev << "." << std::endl;
 	Eigen::ArrayXd int_dist_a = int_dist.array() - sigma;
 	int_dist = int_dist_a.matrix();
 }	

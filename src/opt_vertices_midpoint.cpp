@@ -67,7 +67,9 @@ void opt_vertices_midpoint(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & 
 	V_temp.resize(V.rows(), 3);
 	V_temp = V;
 
-	while ( ((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol)) {
+int max_its = 1000;
+  // loop while cost decreases
+	while  (((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol) && ( num_its <= max_its)) {
 		cur_cost = new_cost;	 
 		V = V_temp;
  		compute_normals(midpoints, closest_point, N);

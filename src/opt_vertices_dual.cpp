@@ -77,9 +77,9 @@ void opt_vertices_dual(const Eigen::MatrixXd & V_1, const Eigen::MatrixXi & F_1,
 	
 	int num_its = 0;
 	// int min_its_to_do = 1000; 
-
+	int max_its = 1000;
   // loop while cost decreases
-	while  ((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol)  {
+	while  (((new_cost < cur_cost) && std::abs(new_cost - cur_cost) >= tol) && ( num_its <= max_its))  {
 		cur_cost = new_cost;	 
 		V = V_temp;
 
