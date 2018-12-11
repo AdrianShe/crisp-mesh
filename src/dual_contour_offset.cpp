@@ -43,9 +43,7 @@ void dual_contour_offset(
   igl::signed_distance(grid_pos, V, F, igl::SIGNED_DISTANCE_TYPE_DEFAULT, -sigma - 3 * h, sigma + 3 * h, dist, I, closest_point, N);
   igl::flood_fill(side, dist);
 
-
-  // produce mesh using marching cubes from distance data with iso level sigma 
-  // igl::copyleft::marching_cubes(dist, grid_pos, side[0], side[1], side[2], sigma, V_2, F_2);
+  // produce mesh using dual contouring
   dual_contour(dist, grid_pos, side[0], side[1], side[2], V, F, sigma, V_2, F_2);
 } 
 

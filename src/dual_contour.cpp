@@ -6,10 +6,8 @@
 #include <igl/copyleft/quadprog.h>
 #include <igl/per_face_normals.h>
 
-// struct voxel {
-//   int vid; // vertex id
-// };
 
+// Root finding on an edge by bisection
 void bisectionSearch(
     const Eigen::RowVectorXd& p0, const Eigen::RowVectorXd& p1,
     const double& val0, const double& val1,
@@ -19,7 +17,6 @@ void bisectionSearch(
   ) {
   Eigen::VectorXi I;
   Eigen::MatrixXd N, closest_point;
-  // igl::signed_distance(grid_pos, V, F, igl::SIGNED_DISTANCE_TYPE_DEFAULT, -sigma - 3 * h, sigma + 3 * h, dist, I, closest_point, N);
 
   // make sure 0 is the side less than sigma
   Eigen::RowVectorXd q0, q1;
@@ -73,53 +70,14 @@ void bisectionSearch(
   // n(0) = I(0);
 }
 
-// Eigen::RowVectorXd linearInterp(
-//     const Eigen::RowVectorXd& p0, const Eigen::RowVectorXd& p1,
-//     const double& val0, const double& val1, 
-//     const double& sigma
-//   ) {
-
-//   // check which side is greater than sigma
-//   Eigen::RowVectorXd q0, q1;
-//   double qval0, qval1;
-//   if (val0 < sigma) {
-//     q0 = p0;
-//     q1 = p1;
-//     qval0 = val0;
-//     qval1 = val1;
-//   }
-//   else {
-//     q0 = p1;
-//     q1 = p0;
-//     qval0 = val1;
-//     qval1 = val0;
-//   }
-
-//   Eigen::RowVectorXd d_10 = q1 - q0;
-//   double total_length = d_10.norm();
-//   d_10 /= total_length;
-  
-//   double c0 = std::fabs(qval0 - sigma);
-//   if (c0 < 1e-5)
-//     return q0;
-//   double c1 = std::fabs(qval1 - sigma);
-//   if (c1 < 1e-5)
-//     return q1;
-
-//   return q0 + d_10*(
-//       c0/c1*total_length / (1 + c0/c1)
-//     );
-// }
-
+// dual contour implementation on uniform grid
 void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
     const int& sidex, const int& sidey, const int& sidez, 
     const Eigen::MatrixXd& V, const Eigen::MatrixXi& F, const double& sigma,
     Eigen::MatrixXd& V2, Eigen::MatrixXi& F2) {
 
-  // Setup useful things
+  // Setup useful variables
   crisp::Voxels voxels(sidex, sidey, sidez);
-  // Eigen::MatrixXd A(10, 3);
-  // Eigen::VectorXd b(10);
   std::vector<Eigen::RowVector3d> normals;
   std::vector<Eigen::RowVector3d> intersects;
   std::vector<double> dots;
@@ -127,8 +85,6 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
   Eigen::RowVectorXd x, n;
   Eigen::VectorXd y;
   std::vector<Eigen::RowVectorXi> faces;
-  // Eigen::Matrix3d ATA;
-  // Eigen::Vector3d ATb;
   Eigen::VectorXd ce;
   Eigen::MatrixXd CE;
   CE.resize(3,0);
@@ -137,19 +93,6 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
   CIT << 1,0,0, 0,1,0, 0,0,1, -1,0,0, 0,-1,0, 0,0,-1;
   double push_factor = 1e-1;
   double bisection_tol = 1e-3;
-
-        // std::cout << CIT << std::endl;
-  // double h = (grid.row(0) - grid.row(1)).norm();
-  // std::cout << h << std::endl;
-
-  // for (int i = 0; i < dist.rows(); ++i) {
-  //   if (dist(i) <= sigma)
-  //     std::cout << i << std::endl;
-  // 
-  // voxels.printDebug();
-  // Eigen::VectorXi corner_test = voxels.getCorners(2,3,1);
-  // for (int i = 0; i < corner_test.rows(); ++i)
-  //   std::cout << corner_test(i) << std::endl;
 
   Eigen::MatrixXd face_norms;
   igl::per_face_normals(V, F, face_norms);
@@ -190,8 +133,7 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
           const Eigen::RowVectorXd& p0 = grid_pos.row(corners(e(0)));
           const Eigen::RowVectorXd& p1 = grid_pos.row(corners(e(1))); 
 
-          // Eigen::RowVectorXd x = linearInterp(p0, p1,
-          //   dist(corners(e(0))), dist(corners(e(1))), sigma);
+          // root finding
           bisectionSearch(p0, p1, dist(corners(e(0))), dist(corners(e(1))),
               sigma, bisection_tol, V, F, x, n);
 
@@ -204,7 +146,7 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
         if (normals.size() < 3)
           throw std::runtime_error("[dual_contour] Less than 3 intersections.");
 
-        // add push to centre
+        // add weight to voxel centre
         Eigen::RowVectorXd x1 = grid_pos.row(corners(0));
         Eigen::RowVectorXd x2 = grid_pos.row(corners(7));
         {
@@ -224,17 +166,7 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
 
         }
 
-
         // solve for vertex
-
-        // Eigen::MatrixXd A_inv;
-        // igl::pinv(Eigen::MatrixXd(A.topRows(num_x)), A_inv);
-        // x = (A_inv*b.topRows(num_x)).transpose();
-
-        // ATA = A.transpose()*A;
-        // ATb = A.transpose()*b;
-        // x = ATA.ldlt().solve(ATb).transpose();
-
         Eigen::MatrixXd A(normals.size(), 3);
         Eigen::VectorXd b(normals.size());
         for (int ii = 0; ii < normals.size(); ++ii) {
@@ -242,13 +174,8 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
           b(ii) = dots[ii];
         } // end loop ii
 
-        // Eigen::MatrixXd A_inv;
-        // igl::pinv(A, A_inv);
-        // x = (A_inv*b).transpose();
-
         Eigen::VectorXd ci0(6);
         ci0 << -x1(0), -x1(1), -x1(2), x2(0), x2(1), x2(2);
-        // ci0 *= -1;
 
         bool success = igl::copyleft::quadprog(
             A.transpose()*A, 
@@ -263,24 +190,7 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
         if (std::isnan(y(0)) || std::isnan(y(1)) || std::isnan(y(2)) )
           throw std::runtime_error("[dual_contour] nan.");
 
-        // clamp
-        bool flag = true;
-        // for (int ii = 0; ii < 3; ++ii) {
-        //   if (x(ii) < x1(ii)) {
-        //     x(ii) = x1(ii);
-        //     flag = false;
-        //   }
-
-        //   if (x(ii) > x2(ii)) {
-        //     x(ii) = x2(ii);
-        //     flag = false;
-        //   }
-        // } // end loop ii
-
-        // if (flag)
           voxels.setVertex(i, j, k, y.transpose());
-        // voxels.setVertex(i, j, k, x);
-
       } // end loop k
     } // end loop j
   } // end loop i
@@ -358,7 +268,6 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
 
   // get vertices
   V2 = voxels.getVertices();
-  // std::cout << V2 << std::endl << std::endl;
 
   // get faces
   F2.resize(faces.size(), 3);
@@ -366,6 +275,5 @@ void dual_contour(const Eigen::VectorXd& dist, const Eigen::MatrixXd& grid_pos,
   for (int i = 0; i < faces.size(); ++i) {
     F2.row(i) = faces[i];
   }
-  // std::cout << F2 << std::endl;
 } 
 

@@ -123,11 +123,11 @@ int main(int argc, char *argv[])
   igl::write_triangle_mesh("marching_cubes_mid_opt.off", V_mcmo, F_mc);
   std::cout << "\n" <<std::endl; 
 
-  /* std::cout << "marching cubes root finding: " <<std::endl;
+  std::cout << "marching cubes root finding: " <<std::endl;
   marching_cubes_offset_rf(V, F, sigma, res, V_mcrf, F_mcrf);
   validate(V, F, V_mcrf, F_mcrf, sigma, int_dist_rf);
   igl::write_triangle_mesh("marching_cubes_rf.off", V_mcrf, F_mcrf);
-  std::cout << "\n" <<std::endl; */
+  std::cout << "\n" <<std::endl;
 
   std::cout << "dual contouring: " <<std::endl;
   dual_contour_offset(V, F, sigma, res, V_d, F_d);
